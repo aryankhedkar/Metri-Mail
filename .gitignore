@@ -1,0 +1,8 @@
+venv/
+.env
+credentials.json
+token.json
+data/customers.db
+data/processed_emails.json
+__pycache__/
+*.pyc
