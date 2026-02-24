@@ -51,6 +51,23 @@ def _ensure_tables(conn):
             created_at TEXT DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (customer_id) REFERENCES customers (id)
         );
+
+        CREATE TABLE IF NOT EXISTS requests (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            email_id TEXT NOT NULL UNIQUE,
+            customer_id INTEGER,
+            company_name TEXT DEFAULT '',
+            contact_name TEXT DEFAULT '',
+            contact_email TEXT NOT NULL,
+            subject TEXT DEFAULT '',
+            category TEXT NOT NULL,
+            status TEXT DEFAULT 'open',
+            summary TEXT DEFAULT '',
+            received_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            resolved_at TEXT,
+            resolution_notes TEXT DEFAULT '',
+            FOREIGN KEY (customer_id) REFERENCES customers (id)
+        );
     """
     )
     conn.commit()
@@ -170,6 +187,105 @@ def update_customer_field(customer_id, field, value):
     )
     conn.commit()
     conn.close()
+
+
+def log_request(email_id, contact_email, subject, category, customer_id=None,
+                company_name="", contact_name="", summary=""):
+    """Logs an inbound customer request for tracking."""
+    conn = get_connection()
+    try:
+        conn.execute(
+            """INSERT OR IGNORE INTO requests
+               (email_id, customer_id, company_name, contact_name,
+                contact_email, subject, category, summary)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+            (email_id, customer_id, company_name, contact_name,
+             contact_email.lower(), subject, category, summary),
+        )
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def resolve_request(email_id, resolution_notes=""):
+    """Marks a request as resolved."""
+    conn = get_connection()
+    conn.execute(
+        """UPDATE requests
+           SET status = 'resolved', resolved_at = CURRENT_TIMESTAMP, resolution_notes = ?
+           WHERE email_id = ?""",
+        (resolution_notes, email_id),
+    )
+    conn.commit()
+    conn.close()
+
+
+def get_open_requests():
+    """Returns all open (unresolved) requests."""
+    conn = get_connection()
+    cursor = conn.execute(
+        "SELECT * FROM requests WHERE status = 'open' ORDER BY received_at DESC"
+    )
+    rows = cursor.fetchall()
+    conn.close()
+    return [dict(row) for row in rows]
+
+
+def get_all_requests(limit=50):
+    """Returns recent requests regardless of status."""
+    conn = get_connection()
+    cursor = conn.execute(
+        "SELECT * FROM requests ORDER BY received_at DESC LIMIT ?", (limit,)
+    )
+    rows = cursor.fetchall()
+    conn.close()
+    return [dict(row) for row in rows]
+
+
+def get_request_stats():
+    """Returns category breakdown and resolution stats."""
+    conn = get_connection()
+
+    total = conn.execute("SELECT COUNT(*) FROM requests").fetchone()[0]
+    open_count = conn.execute(
+        "SELECT COUNT(*) FROM requests WHERE status = 'open'"
+    ).fetchone()[0]
+    resolved_count = conn.execute(
+        "SELECT COUNT(*) FROM requests WHERE status = 'resolved'"
+    ).fetchone()[0]
+
+    category_rows = conn.execute(
+        """SELECT category, COUNT(*) as count
+           FROM requests GROUP BY category ORDER BY count DESC"""
+    ).fetchall()
+    categories = {row["category"]: row["count"] for row in category_rows}
+
+    customer_rows = conn.execute(
+        """SELECT company_name, COUNT(*) as count
+           FROM requests WHERE company_name != ''
+           GROUP BY company_name ORDER BY count DESC"""
+    ).fetchall()
+    customers = {row["company_name"]: row["count"] for row in customer_rows}
+
+    avg_resolution = conn.execute(
+        """SELECT AVG(
+               (julianday(resolved_at) - julianday(received_at)) * 24
+           ) as avg_hours
+           FROM requests WHERE status = 'resolved'
+           AND resolved_at IS NOT NULL"""
+    ).fetchone()
+    avg_hours = round(avg_resolution["avg_hours"], 1) if avg_resolution["avg_hours"] else None
+
+    conn.close()
+
+    return {
+        "total": total,
+        "open": open_count,
+        "resolved": resolved_count,
+        "avg_resolution_hours": avg_hours,
+        "by_category": categories,
+        "by_customer": customers,
+    }
 
 
 def _row_to_dict(row):

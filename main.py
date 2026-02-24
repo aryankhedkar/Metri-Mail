@@ -21,6 +21,7 @@ from gmail.drafter import create_draft_reply
 from context.classifier import classify_email
 from context.assembler import assemble_context
 from context.tracker import is_processed, mark_processed
+from context.database import get_customer_by_email, log_request
 from agent.generator import generate_draft
 from config import Config
 
@@ -64,6 +65,19 @@ def process_emails(dry_run=False):
             print("  Skipping (auto-reply/newsletter/no response needed).")
             mark_processed(email["id"])
             continue
+
+        customer = get_customer_by_email(sender["email"])
+        log_request(
+            email_id=email["id"],
+            contact_email=sender["email"],
+            subject=email["subject"],
+            category=email_type,
+            customer_id=customer["id"] if customer else None,
+            company_name=customer["company_name"] if customer else "",
+            contact_name=sender["name"],
+            summary=email["snippet"] if email.get("snippet") else email["subject"],
+        )
+        print(f"  Logged request: {email_type} from {sender['name']}")
 
         print("  Assembling context...")
         context = assemble_context(email, thread_history, email_type)

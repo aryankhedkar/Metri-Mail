@@ -14,8 +14,10 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from context.classifier import classify_email
 from context.assembler import assemble_context
+from context.database import get_customer_by_email, log_request
 from agent.generator import generate_draft
 from agent.prompt_builder import build_prompt
+from gmail.reader import extract_sender_info
 
 
 TEST_SCENARIOS = [
@@ -141,6 +143,20 @@ def run_scenario(scenario, dry_run=False, scenario_num=0):
     else:
         email_type = classify_email(email["body"], email["subject"])
         print(f"     Type: {email_type}")
+
+    sender = extract_sender_info(email["from"])
+    customer = get_customer_by_email(sender["email"])
+    log_request(
+        email_id=email["id"],
+        contact_email=sender["email"],
+        subject=email["subject"],
+        category=email_type,
+        customer_id=customer["id"] if customer else None,
+        company_name=customer["company_name"] if customer else "",
+        contact_name=sender["name"],
+        summary=email.get("snippet", email["subject"]),
+    )
+    print(f"     Tracked: logged to request tracker")
 
     print(f"\n  2. Assembling context...")
     context = assemble_context(email, thread, email_type)
