@@ -9,9 +9,9 @@ class Config:
     GMAIL_CREDENTIALS_PATH = os.getenv("GMAIL_CREDENTIALS_PATH", "credentials.json")
     GMAIL_TOKEN_PATH = os.getenv("GMAIL_TOKEN_PATH", "token.json")
 
-    # Anthropic
-    ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
-    CLAUDE_MODEL = os.getenv("CLAUDE_MODEL", "claude-sonnet-4-5-20250514")
+    # LLM
+    OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+    LLM_MODEL = os.getenv("LLM_MODEL", "gpt-4o-mini")
 
     # Agent
     MAX_THREAD_MESSAGES = int(os.getenv("MAX_THREAD_MESSAGES", "10"))

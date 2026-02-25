@@ -1,10 +1,10 @@
-import anthropic
+from openai import OpenAI
 from config import Config
 
 
 def classify_email(email_body, subject, thread_history=None):
     """
-    Uses Claude to classify an incoming email into a response type.
+    Uses OpenAI to classify an incoming email into a response type.
 
     Returns one of:
     - 'acknowledgment': Customer reported an issue, needs acknowledgment
@@ -12,11 +12,13 @@ def classify_email(email_body, subject, thread_history=None):
     - 'update_request': Customer is asking for a status update
     - 'information_ask': Customer needs information or clarification
     - 'mixed_news': Situation requires delivering both good and bad news
+    - 'options_presentation': Customer needs to choose between approaches
+    - 'not_possible': Customer asked for something that cannot be done as requested
     - 'onboarding': Related to new site setup or getting started
     - 'general': Does not fit other categories
     - 'skip': Auto-replies, out-of-office, newsletters, not requiring a response
     """
-    client = anthropic.Anthropic(api_key=Config.ANTHROPIC_API_KEY)
+    client = OpenAI(api_key=Config.OPENAI_API_KEY)
 
     thread_context = ""
     if thread_history:
@@ -25,8 +27,8 @@ def classify_email(email_body, subject, thread_history=None):
             [f"From: {m['from']}\n{m['body'][:500]}" for m in recent]
         )
 
-    response = client.messages.create(
-        model=Config.CLAUDE_MODEL,
+    response = client.chat.completions.create(
+        model=Config.LLM_MODEL,
         max_tokens=50,
         messages=[
             {
@@ -58,7 +60,7 @@ Category:""",
         ],
     )
 
-    category = response.content[0].text.strip().lower()
+    category = response.choices[0].message.content.strip().lower()
 
     valid_categories = [
         "acknowledgment",

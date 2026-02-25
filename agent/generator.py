@@ -1,11 +1,11 @@
-import anthropic
+from openai import OpenAI
 from config import Config
 from agent.prompt_builder import build_prompt
 
 
 def generate_draft(assembled_context, email_type):
     """
-    Calls Claude API to generate an email draft.
+    Calls OpenAI API to generate an email draft.
 
     Args:
         assembled_context: The full context string from assembler.py
@@ -14,18 +14,20 @@ def generate_draft(assembled_context, email_type):
     Returns:
         The generated email draft as a string
     """
-    client = anthropic.Anthropic(api_key=Config.ANTHROPIC_API_KEY)
+    client = OpenAI(api_key=Config.OPENAI_API_KEY)
 
     system_prompt, user_message = build_prompt(assembled_context, email_type)
 
-    response = client.messages.create(
-        model=Config.CLAUDE_MODEL,
+    response = client.chat.completions.create(
+        model=Config.LLM_MODEL,
         max_tokens=1500,
-        system=system_prompt,
-        messages=[{"role": "user", "content": user_message}],
+        messages=[
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_message},
+        ],
     )
 
-    draft = response.content[0].text.strip()
+    draft = response.choices[0].message.content.strip()
 
     draft = _clean_draft(draft)
 
@@ -35,7 +37,7 @@ def generate_draft(assembled_context, email_type):
 def _clean_draft(draft):
     """
     Removes any unwanted formatting from the generated draft.
-    Claude sometimes wraps emails in markdown code blocks or adds headers.
+    LLMs sometimes wrap emails in markdown code blocks or add headers.
     """
     if draft.startswith("```"):
         lines = draft.split("\n")
