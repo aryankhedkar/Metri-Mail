@@ -13,10 +13,7 @@ def get_unread_customer_emails(service=None):
     if service is None:
         service = get_gmail_service()
 
-    domain_queries = " OR ".join(
-        [f"from:@{domain}" for domain in Config.CUSTOMER_DOMAINS]
-    )
-    query = f"is:unread ({domain_queries})"
+    query = "is:unread"
 
     results = (
         service.users()

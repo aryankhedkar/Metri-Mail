@@ -63,7 +63,7 @@ def _build_reply_subject(subject):
 def _text_to_html(text):
     """
     Converts plain text to simple HTML for email.
-    Preserves paragraph breaks and basic structure.
+    Handles paragraphs, bullet lists, and nested sub-bullets.
     """
     paragraphs = text.split("\n\n")
     html_parts = []
@@ -72,22 +72,40 @@ def _text_to_html(text):
         lines = para.split("\n")
         processed_lines = []
         in_list = False
+        in_sublist = False
 
         for line in lines:
             stripped = line.strip()
-            if stripped.startswith("- ") or stripped.startswith("* "):
+            is_sub = line.startswith("  -") or line.startswith("  *") or line.startswith("\t-") or line.startswith("\t*")
+            is_top = (stripped.startswith("- ") or stripped.startswith("* ")) and not is_sub
+
+            if is_sub:
+                if not in_sublist:
+                    processed_lines.append("<ul style='margin-top:2px;margin-bottom:2px;'>")
+                    in_sublist = True
+                item_text = stripped[2:]
+                processed_lines.append(f"  <li>{item_text}</li>")
+            elif is_top:
+                if in_sublist:
+                    processed_lines.append("</ul>")
+                    in_sublist = False
                 if not in_list:
                     processed_lines.append("<ul>")
                     in_list = True
                 item_text = stripped[2:]
                 processed_lines.append(f"  <li>{item_text}</li>")
             else:
+                if in_sublist:
+                    processed_lines.append("</ul>")
+                    in_sublist = False
                 if in_list:
                     processed_lines.append("</ul>")
                     in_list = False
                 if stripped:
                     processed_lines.append(f"<p>{stripped}</p>")
 
+        if in_sublist:
+            processed_lines.append("</ul>")
         if in_list:
             processed_lines.append("</ul>")
 

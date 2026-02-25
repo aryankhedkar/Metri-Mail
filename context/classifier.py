@@ -29,7 +29,7 @@ def classify_email(email_body, subject, thread_history=None):
 
     response = client.chat.completions.create(
         model=Config.LLM_MODEL,
-        max_tokens=50,
+        max_completion_tokens=50,
         messages=[
             {
                 "role": "user",

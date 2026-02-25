@@ -20,9 +20,9 @@ def generate_draft(assembled_context, email_type):
 
     response = client.chat.completions.create(
         model=Config.LLM_MODEL,
-        max_tokens=1500,
+        max_completion_tokens=1500,
         messages=[
-            {"role": "system", "content": system_prompt},
+            {"role": "developer", "content": system_prompt},
             {"role": "user", "content": user_message},
         ],
     )
@@ -54,4 +54,13 @@ def _clean_draft(draft):
             continue
         cleaned_lines.append(line)
 
-    return "\n".join(cleaned_lines).strip()
+    draft = "\n".join(cleaned_lines).strip()
+
+    import re
+    draft = re.sub(r"\*\*(.+?)\*\*", r"\1", draft)
+    draft = re.sub(r"(?<!\s)\*(.+?)\*(?!\s)", r"\1", draft)
+    draft = re.sub(r"^#{1,6}\s+", "", draft, flags=re.MULTILINE)
+    draft = draft.replace("\u2014", ", ")
+    draft = draft.replace("\u2013", "-")
+
+    return draft

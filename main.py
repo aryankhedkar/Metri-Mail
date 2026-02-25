@@ -26,6 +26,56 @@ from agent.generator import generate_draft
 from config import Config
 
 
+SKIP_DOMAINS = {
+    "metrisenergy.com",
+    "calendar.google.com",
+    "google.com",
+    "slack.com",
+    "notifications.slack.com",
+    "noreply",
+    "no-reply",
+    "mailer-daemon",
+    "postmaster",
+    "cursor.com",
+    "github.com",
+    "linear.app",
+    "vercel.com",
+    "stripe.com",
+}
+
+SKIP_SUBJECT_PATTERNS = [
+    "invitation:",
+    "accepted:",
+    "declined:",
+    "updated invitation:",
+    "canceled event:",
+    "out of office",
+    "automatic reply",
+    "auto-reply",
+    "undeliverable",
+    "delivery status",
+    "read receipt",
+]
+
+
+def _should_skip(sender_email, subject):
+    sender_lower = sender_email.lower()
+    domain = sender_lower.split("@")[1] if "@" in sender_lower else ""
+    local = sender_lower.split("@")[0] if "@" in sender_lower else sender_lower
+
+    if domain in SKIP_DOMAINS:
+        return True
+    if local in ("noreply", "no-reply", "mailer-daemon", "postmaster"):
+        return True
+
+    subject_lower = subject.lower()
+    for pattern in SKIP_SUBJECT_PATTERNS:
+        if pattern in subject_lower:
+            return True
+
+    return False
+
+
 def process_emails(dry_run=False):
     """
     Main processing function. Fetches unread customer emails,
@@ -49,6 +99,12 @@ def process_emails(dry_run=False):
             continue
 
         sender = extract_sender_info(email["from"])
+
+        if _should_skip(sender["email"], email["subject"]):
+            print(f"  Skipping (filtered): {email['subject']}")
+            mark_processed(email["id"])
+            continue
+
         print(f"\n  Processing: {email['subject']}")
         print(f"  From: {sender['name']} <{sender['email']}>")
 

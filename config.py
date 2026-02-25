@@ -11,7 +11,7 @@ class Config:
 
     # LLM
     OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-    LLM_MODEL = os.getenv("LLM_MODEL", "gpt-4o-mini")
+    LLM_MODEL = os.getenv("LLM_MODEL", "o3")
 
     # Agent
     MAX_THREAD_MESSAGES = int(os.getenv("MAX_THREAD_MESSAGES", "10"))

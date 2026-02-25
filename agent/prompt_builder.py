@@ -12,7 +12,11 @@ def build_prompt(assembled_context, email_type):
 
     type_instructions = _load_type_instructions(email_type)
 
+    knowledge_base = _load_prompt_file(os.path.join("prompts", "knowledge_base.md"))
+
     full_system_prompt = f"{system_prompt}\n\n---\n\n## RESPONSE TYPE INSTRUCTIONS\n\n{type_instructions}"
+    if knowledge_base:
+        full_system_prompt += f"\n\n---\n\n{knowledge_base}"
 
     user_message = f"""Here is the context and the email you need to respond to. Draft a reply following the guidelines and the "{email_type}" response type instructions.
 
@@ -28,7 +32,10 @@ Write the email draft now. Critical reminders:
 - Do NOT use banned closings: "Please do not hesitate to reach out", "Let me know if you have any questions"
 - Flag anything you are unsure about with [ARYAN: ...]
 - End with a forward-looking line BEFORE "Best,\\nAryan" (e.g., "Looking forward to it." or "I will keep you posted.")
-- End with "Best,\\nAryan" on its own line"""
+- End with "Best,\\nAryan" on its own line
+- FORMATTING: Write plain text. No **bold**, no *italics*, no ## headings. For lists, use "- " for bullets and "  - " (two spaces then dash) for sub-bullets. The output is converted to HTML before going into Gmail.
+- DO NOT REGURGITATE: Never restate what the customer already told you. They know what they said. Instead, respond with what YOU are going to do about it, what you need from them, or what the next step is. Add value, do not echo.
+- NEVER use em dashes. No "\u2014" character anywhere. Use commas, full stops, or rewrite the sentence."""
 
     return full_system_prompt, user_message
 
