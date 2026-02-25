@@ -27,7 +27,6 @@ Customers are commercial solar portfolio owners, O&M contractors, and asset mana
 - Maria (Product)
 - Dilan (Design)
 - James, Brian, Lucas, Matheus, Jake (Engineering)
-- Otis (Support)
 - Alex (Implementations Expert)
 
 ---
