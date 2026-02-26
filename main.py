@@ -1,7 +1,7 @@
 """
 Metris Email Agent
 ==================
-Watches Gmail for customer emails, generates draft responses using Claude,
+Watches Gmail for customer emails, generates draft responses using GPT-4o,
 and saves them to your drafts folder for review.
 
 Usage:
@@ -138,7 +138,7 @@ def process_emails(dry_run=False):
         print("  Assembling context...")
         context = assemble_context(email, thread_history, email_type)
 
-        print("  Generating draft with Claude...")
+        print(f"  Generating draft with {Config.LLM_MODEL}...")
         draft_body = generate_draft(context, email_type)
 
         if dry_run:

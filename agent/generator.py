@@ -1,4 +1,5 @@
-from openai import OpenAI
+import time
+from openai import OpenAI, RateLimitError
 from config import Config
 from agent.prompt_builder import build_prompt
 
@@ -18,14 +19,23 @@ def generate_draft(assembled_context, email_type):
 
     system_prompt, user_message = build_prompt(assembled_context, email_type)
 
-    response = client.chat.completions.create(
-        model=Config.LLM_MODEL,
-        max_completion_tokens=1500,
-        messages=[
-            {"role": "developer", "content": system_prompt},
-            {"role": "user", "content": user_message},
-        ],
-    )
+    for attempt in range(3):
+        try:
+            response = client.chat.completions.create(
+                model=Config.LLM_MODEL,
+                max_completion_tokens=1500,
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_message},
+                ],
+            )
+            break
+        except RateLimitError as e:
+            if attempt == 2:
+                raise
+            wait = 60 * (attempt + 1)
+            print(f"  Rate limit hit, waiting {wait}s before retry...")
+            time.sleep(wait)
 
     draft = response.choices[0].message.content.strip()
 
